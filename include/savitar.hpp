@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <mutex>
+#include <atomic>
 
 namespace Savitar {
 
@@ -17,7 +19,7 @@ struct CellState {
     float    voltage_v;       // 32-bit floating point cell electrical voltage parameter
     float    temperature_c;   // 32-bit floating point cell thermal metric parameter
     float    current_a;       // 32-bit floating point raw amperage current load metric
-    uint64_t timestamp_us;    // 64-bit microsecond execution clock log timestamp
+    uint64_t timestamp_us;    // 64-bit microsecond clock log timestamp
     uint8_t  is_isolated;     // 8-bit boolean isolation gate marker (0 = Active, 1 = SHUTDOWN)
 };
 #pragma pack(pop)
@@ -33,13 +35,25 @@ public:
     bool deserialize_matrix_from_disk(const std::string& host_path);
     void display_active_cells() const;
 
+    // Milestone 2 Core Primitives (Multi-Threaded Observer Loops & Interrupt Gates)
+    void spawn_monitor_thread();
+    void terminate_monitor_thread();
+    void execute_hardware_interrupt_isolation(uint32_t target_cell_id);
+
     // State Tracking Getters
-    size_t get_cached_cell_count() const { return cell_registry_cache_.size(); }
-    const std::vector<CellState>& get_cell_registry() const { return cell_registry_cache_; }
+    size_t get_cached_cell_count();
+    std::vector<CellState> get_cell_registry_copy();
 
 private:
     std::vector<CellState> cell_registry_cache_; // Contiguous in-memory telemetry table array cache
     uint64_t get_system_microseconds() const;
+
+    // Concurrency synchronization modules
+    std::mutex              kernel_mutex_;
+    std::atomic<bool>       monitor_active_;
+    uint64_t                critical_fault_counter_;
+
+    void background_observer_worker_loop();
 };
 
 } // namespace Savitar
