@@ -1,0 +1,47 @@
+#ifndef SAVITAR_HPP
+#define SAVITAR_HPP
+
+#include <cstdint>
+#include <string>
+#include <vector>
+
+namespace Savitar {
+
+#pragma pack(push, 1) // Enforce zero-padding array constraints for raw contiguous byte access
+/**
+ * Packed Battery Cell State Record
+ * Size: Exactly 25 bytes per cell, eliminating internal cache fragmentation blocks.
+ */
+struct CellState {
+    uint32_t cell_id;         // 32-bit unique hardware cell identification index key
+    float    voltage_v;       // 32-bit floating point cell electrical voltage parameter
+    float    temperature_c;   // 32-bit floating point cell thermal metric parameter
+    float    current_a;       // 32-bit floating point raw amperage current load metric
+    uint64_t timestamp_us;    // 64-bit microsecond execution clock log timestamp
+    uint8_t  is_isolated;     // 8-bit boolean isolation gate marker (0 = Active, 1 = SHUTDOWN)
+};
+#pragma pack(pop)
+
+class FaultIsolationKernel {
+public:
+    FaultIsolationKernel();
+    ~FaultIsolationKernel();
+
+    // Milestone 1 Core Primitives
+    bool register_cell_to_cache(uint32_t id, float voltage, float temp, float current);
+    bool serialize_matrix_to_disk(const std::string& host_path);
+    bool deserialize_matrix_from_disk(const std::string& host_path);
+    void display_active_cells() const;
+
+    // State Tracking Getters
+    size_t get_cached_cell_count() const { return cell_registry_cache_.size(); }
+    const std::vector<CellState>& get_cell_registry() const { return cell_registry_cache_; }
+
+private:
+    std::vector<CellState> cell_registry_cache_; // Contiguous in-memory telemetry table array cache
+    uint64_t get_system_microseconds() const;
+};
+
+} // namespace Savitar
+
+#endif // SAVITAR_HPP
