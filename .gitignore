@@ -1,0 +1,13 @@
+# Compilation binary targets
+savitar-vfs
+build/
+*.o
+*.out
+
+# Sovereign battery state container format extensions
+*.sav
+
+# Transient system logs and temporary swap files
+.DS_Store
+*.swp
+*.log
